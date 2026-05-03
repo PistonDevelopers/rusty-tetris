@@ -1,6 +1,5 @@
 use crate::tetromino::Rotation::*;
 use crate::tetromino::{Color, Rotation, Tetromino};
-use std::usize;
 
 pub const BOARD_WIDTH: usize = 10;
 pub const BOARD_HEIGHT: usize = 20;

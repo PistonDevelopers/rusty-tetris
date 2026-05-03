@@ -1,7 +1,10 @@
 #![allow(clippy::identity_op)]
-use gfx_device_gl::Resources;
-use piston_window::*;
-use rand::{thread_rng, Rng};
+use piston_window::wgpu_graphics::Texture;
+use piston_window::{
+    Key, UpdateArgs,
+    graphics::{Context, Graphics, Image, Transformed, rectangle},
+};
+use rand::Rng;
 use std::default::Default;
 
 use crate::active::ActiveTetromino;
@@ -104,14 +107,14 @@ pub struct Tetris {
     state: State,
     control_state: ControlState,
     time: f64,
-    block: Texture<Resources>,
+    block: Texture,
     paused: bool,
     scale: f64,
     bag: TetrominoBag,
 }
 
 impl Tetris {
-    pub fn new(scale: f64, texture: Texture<Resources>, initial_stack_size: usize) -> Tetris {
+    pub fn new(scale: f64, texture: Texture, initial_stack_size: usize) -> Tetris {
         let stack_size = if initial_stack_size < BOARD_HEIGHT {
             initial_stack_size
         } else {
@@ -147,7 +150,7 @@ impl Tetris {
         if initial_stack_size > 0 {
             for y in 0usize..initial_stack_size {
                 // set random cells within a row
-                for x in (0usize..BOARD_WIDTH).filter(|_| thread_rng().gen()) {
+                for x in (0usize..BOARD_WIDTH).filter(|_| rand::rng().random()) {
                     board[(BOARD_HEIGHT - 1) - y][x] = Some(Color::Grey);
                 }
             }
@@ -330,7 +333,11 @@ impl Tetris {
         self.next_shape = self.bag.next().unwrap();
     }
 
-    pub fn render(&mut self, c: &Context, g: &mut G2d) {
+    pub fn render<G: Graphics<Texture = piston_window::wgpu_graphics::Texture>>(
+        &mut self,
+        c: &Context,
+        g: &mut G,
+    ) {
         let c = c.zoom(self.scale);
         fn pos(n: usize) -> f64 {
             n as f64 * TILE_SIZE

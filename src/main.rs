@@ -1,22 +1,20 @@
 use clap::Parser;
-use find_folder;
-use music;
-use piston_window::*;
+use piston_window::wgpu_graphics::{Texture, TextureSettings};
+use piston_window::{
+    Button, PistonWindow, PressEvent, ReleaseEvent, UpdateEvent, WindowSettings, graphics::clear,
+};
+use sdl2::mixer;
 
 mod active;
 mod tetris;
 mod tetromino;
 
-#[derive(Copy, Clone, Hash, PartialEq, Eq)]
-enum Music {
-    // gravitationalWaves by airtone (c)
-    // copyright 2016 Licensed under a Creative Commons Attribution Noncommercial  (3.0) license.
-    // http://dig.ccmixter.org/files/airtone/55021
-    Waves,
-}
-
-#[derive(Copy, Clone, Hash, PartialEq, Eq)]
-enum Sound {}
+// Embedded assets (included in the binary)
+const BLOCK_PNG: &[u8] = include_bytes!("../bin/assets/block.png");
+// gravitationalWaves by airtone (c)
+// copyright 2016 Licensed under a Creative Commons Attribution Noncommercial  (3.0) license.
+// http://dig.ccmixter.org/files/airtone/55021
+const WAVES_OGG: &[u8] = include_bytes!("../bin/assets/airtone-gravitationalWaves.ogg");
 
 #[derive(Parser)]
 #[command(version, about, long_about = Some("A simple Tetris clone written in Rust"))]
@@ -34,7 +32,7 @@ struct CliArgs {
     mini: bool,
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let CliArgs {
         initial_stack_size,
         music_off,
@@ -48,47 +46,66 @@ fn main() {
     };
     let mut window: PistonWindow = WindowSettings::new("Rusty Tetris", [width, height])
         .exit_on_esc(true)
-        .build()
-        .unwrap_or_else(|e| panic!("Failed to build PistonWindow: {}", e));
-    let assets = find_folder::Search::ParentsThenKids(3, 3)
-        .for_folder("assets")
-        .unwrap();
-    let basic_block = Texture::from_path(
-        &mut window.create_texture_context(),
-        assets.join("block.png"),
-        Flip::None,
-        &TextureSettings::new(),
-    )
-    .unwrap_or_else(|e| panic!("Failed to load assets: {}", e));
+        .build()?;
+
+    let basic_block = {
+        let img = image::load_from_memory(BLOCK_PNG)?.to_rgba8();
+        Texture::from_image(
+            &mut window.create_texture_context(),
+            &img,
+            &TextureSettings::new(),
+        )
+        .map_err(|e| e.to_string())?
+    };
+
     let mut game = tetris::Tetris::new(
         if mini { 0.5 } else { 1.0 },
         basic_block,
         initial_stack_size,
     );
 
-    music::start::<Music, Sound, _>(16, || {
-        music::bind_music_file(Music::Waves, assets.join("airtone-gravitationalWaves.ogg"));
-        if !music_off {
-            music::set_volume(0.2);
-            music::play_music(&Music::Waves, music::Repeat::Forever);
+    let sdl;
+    let _audio;
+    let _mixer;
+    let waves;
+    if !music_off {
+        sdl = sdl2::init()?;
+        _audio = sdl.audio()?;
+        _mixer = mixer::init(mixer::InitFlag::OGG);
+        mixer::open_audio(
+            mixer::DEFAULT_FREQUENCY,
+            mixer::DEFAULT_FORMAT,
+            mixer::DEFAULT_CHANNELS,
+            1024,
+        )?;
+        mixer::allocate_channels(16);
+        waves = mixer::Music::from_static_bytes(WAVES_OGG)?;
+        let vol = (0.4_f64 * mixer::MAX_VOLUME as f64) as i32;
+        mixer::Music::set_volume(vol);
+        waves.play(-1)?;
+    }
+
+    while let Some(e) = window.next() {
+        window.draw_2d(&e, |c, gl, _| {
+            clear([1.0; 4], gl);
+            game.render(&c, gl);
+        });
+
+        if let Some(uargs) = e.update_args() {
+            game.update(&uargs);
         }
-        while let Some(e) = window.next() {
-            window.draw_2d(&e, |c, gl, _| {
-                clear([1.0; 4], gl);
-                game.render(&c, gl);
-            });
 
-            if let Some(uargs) = e.update_args() {
-                game.update(&uargs);
-            }
-
-            if let Some(Button::Keyboard(key)) = e.press_args() {
-                game.key_press(&key);
-            }
-
-            if let Some(Button::Keyboard(key)) = e.release_args() {
-                game.key_release(&key);
-            }
+        if let Some(Button::Keyboard(key)) = e.press_args() {
+            game.key_press(&key);
         }
-    })
+
+        if let Some(Button::Keyboard(key)) = e.release_args() {
+            game.key_release(&key);
+        }
+    }
+
+    // Avoid potential destructor-time crashes in some EGL/driver stacks by
+    // exiting immediately (bypasses running global destructors that can hit
+    // driver bugs during cleanup). This is safer for a short-lived app.
+    std::process::exit(0);
 }

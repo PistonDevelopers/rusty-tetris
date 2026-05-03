@@ -16,21 +16,21 @@ The fall speed increases every 10 tetrominoes.
 - F1 => restart the game at any time
 
 ## Command line options
-- `-m` By default the game starts with a resolution of 600x800. With the `-m` option a minified version gets rendered which should also work on smaller screens. 
+- `-m` By default the game starts with a resolution of 600x800. With the `-m` option a minified version gets rendered which should also work on smaller screens.
 - `-o` Switches off the background music
 - `-i` specifies the number of initial lines whose cells should be randomly filled
 
-## How to build & run
+## How to install
 
 Prerequisites:
-- Rust 1.0 or newer (best way to install is [rustup](https://www.rustup.rs/))
+- install Rust (best way is [rustup](https://www.rustup.rs/))
 - install [External Dependencies](#external-dependencies)
 
-Build & run:
+Install:
 
 1. `git clone ...` the repository
 2. cd into the `rusty-tetris` directory
-3. `cargo run --release`
+3. `cargo install --path .`
 
 Windows:
 
@@ -54,7 +54,7 @@ The piston game engine currently depends on a few external non-Rust libraries
 
 ## Assets
 The background music
-- gravitationalWaves by airtone (c) copyright 2016 Licensed under a Creative Commons Attribution Noncommercial  (3.0) license. http://dig.ccmixter.org/files/airtone/55021 
+- gravitationalWaves by airtone (c) copyright 2016 Licensed under a Creative Commons Attribution Noncommercial  (3.0) license. http://dig.ccmixter.org/files/airtone/55021
 
 ## Remark
 The initial [Rusty Tetris](https://github.com/bachm/rusty-tetris) version was implemented by [bachm](https://github.com/bachm).

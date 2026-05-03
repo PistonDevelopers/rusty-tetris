@@ -1,6 +1,7 @@
+use rand::seq::SliceRandom;
+
 use crate::tetromino::Color::*;
 use crate::tetromino::Rotation::*;
-use rand::{seq::SliceRandom, thread_rng};
 
 #[derive(Copy, Clone)]
 pub enum Color {
@@ -169,7 +170,7 @@ impl Iterator for TetrominoBag {
     fn next(&mut self) -> Option<Self::Item> {
         if self.bag.is_empty() {
             self.bag.extend_from_slice(&[0, 1, 2, 3, 4, 5, 6]);
-            let mut rng = thread_rng();
+            let mut rng = rand::rng();
             self.bag.shuffle(&mut rng);
             while !self.valid_start() {
                 self.bag.shuffle(&mut rng);
